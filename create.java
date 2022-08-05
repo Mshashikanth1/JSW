@@ -17,8 +17,8 @@ import java.sql.Statement;
  */
 public class create extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-    String salt="";
-	String encrypt(String enp) {
+ 
+	String encrypt(String enp,String salt) {
 		System.out.println("performing encryption");
 		return enp+salt;
 		
@@ -26,7 +26,7 @@ public class create extends HttpServlet {
     
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		PrintWriter out =response.getWriter();
-		try {
+	     try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			Connection conn=DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useSSL=false","root","Mshashikanth@1");
 			
@@ -34,19 +34,30 @@ public class create extends HttpServlet {
 			System.out.println(conn);
 			Statement s=conn.createStatement();
 			System.out.println(conn);
-			s.executeUpdate("insert  into data (username, password) values (\""+request.getParameter("username")+"\" , \""+encrypt(request.getParameter("password"))+"\");");
+			ResultSet r= s.executeQuery("select * from data where username="+"\""+request.getParameter("username")+"\"");
+			if(r.next()) {
+			if(r.getString(1).equals(request.getParameter("username"))) {
+				//update password
+				String salt=r.getString(4);
+				if (salt.equals(request.getParameter("salt"))){
+				s.executeUpdate("update data set password=\""+encrypt(request.getParameter("password"),salt)+"\" where username=\""+request.getParameter("username")+"\";");
+				out.println("Password reset sucess :");}
+				else {
+					out.println("Incorrect details plz enter correct details");
+				}
+				
+			}}
+			else {
+			
+				//create user
+				String salt=request.getParameter("salt");
+				s.executeUpdate("insert  into data (username, password,salt) values (\""+request.getParameter("username")+"\" , \""+encrypt(request.getParameter("password"),salt)+"\" , \""+request.getParameter("salt")+"\");");
 			//conn.commit();
+			s.executeUpdate("create table "+request.getParameter("username")+" (statement varchar(100));");
 			conn.close();
-			out.println("<head>\r\n"
-					+ "<meta charset=\"ISO-8859-1\">\r\n"
-					+ "<title>JSW</title>\r\n"
-					+ "<style>\r\n"
-					+ "         body {\r\n"
-					+ "            background-image: url(\"jsw.png\");\r\n"
-					+ "         }\r\n"
-					+ "      </style>\r\n"
-					+ "</head>"+"User is created added");
-			}catch(Exception e) {out.println(e.getMessage());}
+			out.println("User is created added");
+			request.getRequestDispatcher("index.html").include(request, response);
+			}}catch(Exception e) {out.println(e.getMessage());}
 		
 	}
 

@@ -2,12 +2,14 @@ package servlet;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
+import java.util.Calendar;
 
 import dbcon.database;
 /**
@@ -20,9 +22,9 @@ public class perform extends HttpServlet {
 	private static final long serialVersionUID = 1L;
       Connection conn=null;
       //String enpd=null;
-      String salt =""; 
+     
       
-   String decrypt(String dcp) {
+   String decrypt(String dcp,String salt) {
 		   System.out.println("performing decryption");
 		   dcp=dcp.replace(salt,"");
 		   System.out.println(dcp);
@@ -40,16 +42,26 @@ public class perform extends HttpServlet {
 			Connection conn=  database.connect();
 			//Connection conn= new database().connect();
 			System.out.println(conn);
+			Calendar c = Calendar.getInstance();
+	        System.out.println("The Current Date is:" + c.getTime());
 			Statement s=conn.createStatement();
 			
 			
 			ResultSet r= s.executeQuery("select * from data where username="+"\""+request.getParameter("username")+"\"");
 			
 			r.next();
-			String dpass=decrypt(r.getString(2));
+			String salt=r.getString(4);
+			System.out.println(salt);
+			
+			String dpass=decrypt(r.getString(2),salt);
+			System.out.println(pass+" ,"+ dpass);
 			if(pass.equals(dpass)){
-				data d= new data();
-				d.username=request.getParameter("username");
+				//data d= new data();
+				//d.username=request.getParameter("username");
+				Cookie ck =new Cookie("username",request.getParameter("username"));
+				response.addCookie(ck);
+				String username=request.getParameter("username");
+				conn.close();
 				//request.setAttribute("username", "shashi");
 				out.println("<head>\r\n"
 						+ "<meta charset=\"ISO-8859-1\">\r\n"
@@ -58,10 +70,10 @@ public class perform extends HttpServlet {
 						+ "         body {\r\n"
 						+ "            background-image: url(\"jsw.png\");\r\n"
 					
-                        +"				font-weight: bold;\r\n"
+                       // +"				font-weight: bold;\r\n"
 						+ "         }\r\n"
 						+ "      </style>\r\n"
-						+ "</head>"+"<img src=\"user.png\"  width=\"128\" height=\"128\"><br>hii "+d.username+",login sucessful <body >\r\n"
+						+ "</head>"+"<img src=\"user.png\"  width=\"128\" height=\"128\"><br>hii "+username+",login sucessful<br>"+"The Current Date is:" + c.getTime()+" <body >\r\n"
 						
 						+ "<form action=\"./wwithdraw\" method=\"post\" >\r\n"
 						+ "Enter The Amount To be With Drawn: <input type=\"numbers\" name=\"bal\" value=><br>"
@@ -89,7 +101,14 @@ public class perform extends HttpServlet {
 						+ "<form action=\"./exit\" method=\"post\">\r\n"
 						+ "<input type=\"Submit\" value=\"exit\"><br>\r\n"
 						+ "</form>\r\n"
-						+ "</body>");
+						+ "</body>"
+						
+                        + "<form action=\"./statement\" method=\"post\">\r\n"
+                        + "<input type=\"Submit\" value=\"Print Statement \"><br>\r\n"
+                        + "</form>\r\n"
+                        + "</body>"
+                      
+						);
 				
 				
 				
@@ -115,7 +134,8 @@ public class perform extends HttpServlet {
 						+ "</form>\r\n"
 						+ "</body>");
 			}
-			conn.close();
+			System.out.println("you can still execute the queryes");
+			
 			}catch(Exception e) {out.println("<!DOCTYPE html>\r\n"
 					+ "<html>\r\n"
 					+ "<head>\r\n"
